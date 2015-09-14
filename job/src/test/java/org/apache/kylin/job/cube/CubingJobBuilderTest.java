@@ -58,6 +58,7 @@ public class CubingJobBuilderTest extends LocalFileMetadataTestCase {
 
   @Before
   public void before() throws Exception {
+    createTestMetadata();
     final KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
     cubeManager = CubeManager.getInstance(kylinConfig);
     jobEngineConfig = new JobEngineConfig(kylinConfig);
