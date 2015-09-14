@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HBaseMetadataTestCase;
+import org.apache.kylin.common.util.LocalFileMetadataTestCase;
 import org.apache.kylin.cube.CubeManager;
 import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.job.DeployUtil;
@@ -47,7 +48,9 @@ import static org.junit.Assert.*;
 /**
  * Created by sunyerui on 15/8/31.
  */
-public class CubingJobBuilderTest extends HBaseMetadataTestCase {
+
+@Ignore
+public class CubingJobBuilderTest extends LocalFileMetadataTestCase {
 
   private JobEngineConfig jobEngineConfig;
 
@@ -55,21 +58,18 @@ public class CubingJobBuilderTest extends HBaseMetadataTestCase {
 
   private static final Log logger = LogFactory.getLog(CubingJobBuilderTest.class);
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    staticCreateTestMetadata();
-  }
-
   @Before
   public void before() throws Exception {
-    DeployUtil.deployMetadata();
-
     final KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
     cubeManager = CubeManager.getInstance(kylinConfig);
     jobEngineConfig = new JobEngineConfig(kylinConfig);
   }
 
-  @AfterClass
+  @After
+  public void after() throws Exception {
+    cleanupTestMetadata();
+  }
+
   public static void afterClass() {
     staticCleanupTestMetadata();
   }
