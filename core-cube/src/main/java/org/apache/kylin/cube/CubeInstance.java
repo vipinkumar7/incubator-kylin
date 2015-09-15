@@ -20,6 +20,7 @@ package org.apache.kylin.cube;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.persistence.ResourceStore;
@@ -27,8 +28,6 @@ import org.apache.kylin.common.persistence.RootPersistentEntity;
 import org.apache.kylin.cube.model.CubeDesc;
 import org.apache.kylin.metadata.model.DataModelDesc;
 import org.apache.kylin.metadata.model.IBuildable;
-import org.apache.kylin.metadata.model.IEngineAware;
-import org.apache.kylin.metadata.model.IStorageAware;
 import org.apache.kylin.metadata.model.LookupDesc;
 import org.apache.kylin.metadata.model.MeasureDesc;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
@@ -69,7 +68,7 @@ public class CubeInstance extends RootPersistentEntity implements IRealization, 
 
         return cubeInstance;
     }
-    
+
     @JsonIgnore
     private KylinConfig config;
     @JsonProperty("name")
@@ -92,6 +91,8 @@ public class CubeInstance extends RootPersistentEntity implements IRealization, 
 
     @JsonProperty("create_time_utc")
     private long createTimeUTC;
+
+   
 
     private String projectName;
 
@@ -124,7 +125,7 @@ public class CubeInstance extends RootPersistentEntity implements IRealization, 
         }
         return mergingSegments;
     }
-    
+
     public CubeDesc getDescriptor() {
         return CubeDescManager.getInstance(config).getCubeDesc(descName);
     }
@@ -440,12 +441,11 @@ public class CubeInstance extends RootPersistentEntity implements IRealization, 
     public int getStorageType() {
         return getDescriptor().getStorageType();
     }
-    
 
     @Override
     public int getEngineType() {
         return getDescriptor().getEngineType();
     }
 
-
+   
 }

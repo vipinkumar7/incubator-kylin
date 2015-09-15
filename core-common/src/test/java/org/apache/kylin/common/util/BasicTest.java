@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.IdentityHashMap;
 
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.math3.primes.Primes;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -101,6 +102,10 @@ public class BasicTest {
         Assert.assertTrue(s1 != s2);
         a.put(s1, null);
         b.put(s2, null);
+    }
+    @Test
+    @Ignore("convenient trial tool for dev")
+    public void testX() throws Exception {
     }
 
     @Test

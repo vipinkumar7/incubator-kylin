@@ -67,6 +67,10 @@ public class CubeSegment implements Comparable<CubeSegment>, IDictionaryAware, I
     private String lastBuildJobID;
     @JsonProperty("create_time_utc")
     private long createTimeUTC;
+    @JsonProperty("cuboid_shards")
+    private Map<Long, Short> cuboidShards = null;
+    @JsonProperty("total_shards")
+    private int totalShards = 0;
 
     @JsonProperty("binary_signature")
     private String binarySignature; // a hash of cube schema and dictionary ID, used for sanity check
@@ -360,4 +364,19 @@ public class CubeSegment implements Comparable<CubeSegment>, IDictionaryAware, I
         return cubeInstance.getStorageType();
     }
 
+    public Map<Long, Short> getCuboidShards() {
+        return cuboidShards;
+    }
+
+    public void setCuboidShards(Map<Long, Short> newCuboidShards) {
+        this.cuboidShards = newCuboidShards;
+    }
+    
+    public int getTotalShards() {
+        return totalShards;
+    }
+
+    public void setTotalShards(int totalShards) {
+        this.totalShards = totalShards;
+    }
 }

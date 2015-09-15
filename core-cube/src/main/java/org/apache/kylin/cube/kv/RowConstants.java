@@ -28,6 +28,8 @@ public class RowConstants {
     public static final byte ROWKEY_UPPER_BYTE = (byte) 0xff;
     // row key cuboid id length
     public static final int ROWKEY_CUBOIDID_LEN = 8;
+    // row key shard length
+    public static final int ROWKEY_SHARDID_LEN = 2;
 
     // fuzzy mask
     public static final byte FUZZY_MASK_ZERO = 0;

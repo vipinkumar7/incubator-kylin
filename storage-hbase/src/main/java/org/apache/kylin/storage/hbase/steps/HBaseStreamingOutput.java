@@ -34,7 +34,7 @@ import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.inmemcubing.ICuboidWriter;
 import org.apache.kylin.engine.mr.HadoopUtil;
 import org.apache.kylin.engine.mr.common.BatchConstants;
-import org.apache.kylin.engine.mr.steps.FactDistinctColumnsReducer;
+import org.apache.kylin.engine.mr.common.CuboidStatsUtil;
 import org.apache.kylin.engine.streaming.IStreamingOutput;
 import org.apache.kylin.metadata.model.IBuildable;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class HBaseStreamingOutput implements IStreamingOutput {
             KylinConfig kylinConfig = KylinConfig.getInstanceFromEnv();
             final Configuration conf = HadoopUtil.getCurrentConfiguration();
             final Path outputPath = new Path("file://" + BatchConstants.CFG_STATISTICS_LOCAL_DIR + UUID.randomUUID().toString());
-            FactDistinctColumnsReducer.writeCuboidStatistics(conf, outputPath, samplingResult, 100);
+            CuboidStatsUtil.writeCuboidStatistics(conf, outputPath, samplingResult, 100);
             FSDataInputStream inputStream = null;
             try {
                 inputStream = FileSystem.getLocal(conf).open(new Path(outputPath, BatchConstants.CFG_STATISTICS_CUBOID_ESTIMATION));
