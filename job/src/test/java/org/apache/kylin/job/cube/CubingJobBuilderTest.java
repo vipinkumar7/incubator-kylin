@@ -48,6 +48,7 @@ import static org.junit.Assert.*;
 /**
  * Created by sunyerui on 15/8/31.
  */
+@Ignore 
 public class CubingJobBuilderTest extends LocalFileMetadataTestCase {
 
   private JobEngineConfig jobEngineConfig;
