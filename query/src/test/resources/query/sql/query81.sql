@@ -19,7 +19,7 @@
 SELECT 
  seller_id 
  ,sum(test_kylin_fact.price) as GMV 
- FROM test_kylin_fact inner join edw.test_cal_dt as test_cal_dt
+ FROM test_kylin_fact left join edw.test_cal_dt as test_cal_dt
  ON test_kylin_fact.cal_dt = test_cal_dt.cal_dt
  where test_kylin_fact.cal_dt < DATE '2013-02-01' 
  group by 
