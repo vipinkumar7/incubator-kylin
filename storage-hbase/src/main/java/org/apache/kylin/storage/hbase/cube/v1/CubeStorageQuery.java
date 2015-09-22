@@ -19,6 +19,7 @@
 package org.apache.kylin.storage.hbase.cube.v1;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,11 +35,13 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.kylin.common.util.Bytes;
+import org.apache.kylin.common.util.BytesUtil;
 import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.cube.CubeInstance;
 import org.apache.kylin.cube.CubeManager;
 import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.cuboid.Cuboid;
+import org.apache.kylin.cube.kv.RowConstants;
 import org.apache.kylin.cube.model.CubeDesc;
 import org.apache.kylin.cube.model.CubeDesc.DeriveInfo;
 import org.apache.kylin.cube.model.HBaseColumnDesc;
@@ -437,26 +440,29 @@ public class CubeStorageQuery implements ICachableStorageQuery {
             }
 
             //log
-            sb.append(scanRanges.size() + "=>");
+            sb.append(scanRanges.size() + "=(mergeoverlap)>");
 
             List<HBaseKeyRange> mergedRanges = mergeOverlapRanges(scanRanges);
 
             //log
-            sb.append(mergedRanges.size() + "=>");
+            sb.append(mergedRanges.size() + "=(mergetoomany)>");
 
             mergedRanges = mergeTooManyRanges(mergedRanges);
 
             //log
-            sb.append(mergedRanges.size() + ", ");
+            sb.append(mergedRanges.size() + ",");
 
             result.addAll(mergedRanges);
         }
-
         logger.info(sb.toString());
 
         logger.info("hbasekeyrange count: " + result.size());
+
         dropUnhitSegments(result);
         logger.info("hbasekeyrange count after dropping unhit :" + result.size());
+
+        result = duplicateRangeByShard(result);
+        logger.info("hbasekeyrange count after dropping duplicatebyshard :" + result.size());
 
         return result;
     }
@@ -665,6 +671,42 @@ public class CubeStorageQuery implements ICachableStorageQuery {
                 }
             }
         }
+    }
+
+    private List<HBaseKeyRange> duplicateRangeByShard(List<HBaseKeyRange> scans) {
+        List<HBaseKeyRange> ret = Lists.newArrayList();
+
+        for (HBaseKeyRange scan : scans) {
+            CubeSegment segment = scan.getCubeSegment();
+
+            byte[] startKey = scan.getStartKey();
+            byte[] stopKey = scan.getStopKey();
+
+            short cuboidShardNum = segment.getCuboidShardNum(scan.getCuboid().getId());
+            short cuboidShardBase = segment.getCuboidBaseShard(scan.getCuboid().getId());
+            for (short i = 0; i < cuboidShardNum; ++i) {
+                byte[] newStartKey = duplicateKeyAndChangeShard(i, startKey);
+                byte[] newStopKey = duplicateKeyAndChangeShard(i, stopKey);
+                HBaseKeyRange newRange = new HBaseKeyRange(segment, scan.getCuboid(), newStartKey, newStopKey, //
+                        scan.getFuzzyKeys(), scan.getFlatOrAndFilter(), scan.getPartitionColumnStartDate(), scan.getPartitionColumnEndDate());
+                ret.add(newRange);
+            }
+        }
+
+        Collections.sort(ret, new Comparator<HBaseKeyRange>() {
+            @Override
+            public int compare(HBaseKeyRange o1, HBaseKeyRange o2) {
+                return Bytes.compareTo(o1.getStartKey(), o2.getStartKey());
+            }
+        });
+
+        return ret;
+    }
+
+    private byte[] duplicateKeyAndChangeShard(short newShard, byte[] bytes) {
+        byte[] ret = Arrays.copyOf(bytes, bytes.length);
+        BytesUtil.writeShort(newShard, ret, 0, RowConstants.ROWKEY_SHARDID_LEN);
+        return ret;
     }
 
     private void setThreshold(Collection<TblColRef> dimensions, List<RowValueDecoder> valueDecoders, StorageContext context) {

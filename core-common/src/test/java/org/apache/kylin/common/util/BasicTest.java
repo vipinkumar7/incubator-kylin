@@ -27,7 +27,6 @@ import java.util.Calendar;
 import java.util.IdentityHashMap;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.math3.primes.Primes;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -65,21 +64,9 @@ public class BasicTest {
 
     @Test
     public void testxx() {
-        byte[] temp = new byte[] { 1, 2, 3 };
-        byte[] temp2 = new byte[] { 1, 2, 3 };
-
-        System.out.println(temp.hashCode());
-        System.out.println(temp2.hashCode());
-
-        ByteBuffer buffer = ByteBuffer.allocateDirect(3);
-        buffer.put((byte) 1);
-        buffer.put((byte) 1);
-        buffer.put((byte) 1);
-        buffer.put((byte) 1);
-        System.out.println(buffer.position());
-        System.out.println(buffer.limit());
-        System.out.println(buffer.capacity());
-
+        short x = -64;
+        int y = (int)x;
+        System.out.println(y);
     }
 
     @Test
@@ -103,6 +90,7 @@ public class BasicTest {
         a.put(s1, null);
         b.put(s2, null);
     }
+
     @Test
     @Ignore("convenient trial tool for dev")
     public void testX() throws Exception {

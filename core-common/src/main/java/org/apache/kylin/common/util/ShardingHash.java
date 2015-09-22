@@ -26,21 +26,42 @@ public class ShardingHash {
     static HashFunction hashFunc = Hashing.murmur3_128();
 
     public static short getShard(int integerValue, int totalShards) {
+        if (totalShards <= 1) {
+            return 0;
+        }
         long hash = hashFunc.hashInt(integerValue).asLong();
         return _getShard(hash, totalShards);
     }
 
     public static short getShard(long longValue, int totalShards) {
+        if (totalShards <= 1) {
+            return 0;
+        }
         long hash = hashFunc.hashLong(longValue).asLong();
         return _getShard(hash, totalShards);
     }
 
     public static short getShard(byte[] byteValues, int offset, int length, int totalShards) {
+        if (totalShards <= 1) {
+            return 0;
+        }
+
         long hash = hashFunc.hashBytes(byteValues, offset, length).asLong();
         return _getShard(hash, totalShards);
     }
 
+    public static short getShard(short cuboidShardBase, short shardOffset, int totalShards) {
+        if (totalShards <= 1) {
+            return 0;
+        }
+        return (short) ((cuboidShardBase + shardOffset) % totalShards);
+    }
+
     private static short _getShard(long hash, int totalShard) {
-        return (short) (Math.abs(hash) % totalShard);
+        long x = hash % totalShard;
+        if (x < 0) {
+            x += totalShard;
+        }
+        return (short) x;
     }
 }

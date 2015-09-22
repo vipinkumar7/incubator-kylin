@@ -355,7 +355,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
      */
     private static long estimateCuboidStorageSize(CubeDesc cubeDesc, long cuboidId, long rowCount, long baseCuboidId, List<Integer> rowKeyColumnLength) {
 
-        int bytesLength = RowConstants.ROWKEY_CUBOIDID_LEN;
+        int bytesLength = RowConstants.ROWKEY_HEADER_LEN;
 
         long mask = Long.highestOneBit(baseCuboidId);
         long parentCuboidIdActualLength = Long.SIZE - Long.numberOfLeadingZeros(baseCuboidId);

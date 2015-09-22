@@ -7,7 +7,7 @@ import java.util.BitSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.MapContext;
-import org.apache.kylin.common.util.Bytes;
+import org.apache.kylin.common.util.BytesUtil;
 import org.apache.kylin.common.util.ShardingHash;
 import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.cuboid.Cuboid;
@@ -39,14 +39,12 @@ public class MapContextGTRecordWriter implements ICuboidWriter {
     private long cuboidRowCount = 0;
 
     //for shard
-    private int totalShards = 0;
 
     public MapContextGTRecordWriter(MapContext<?, ?, ByteArrayWritable, ByteArrayWritable> mapContext, CubeDesc cubeDesc, CubeSegment cubeSegment) {
         this.mapContext = mapContext;
         this.cubeDesc = cubeDesc;
         this.cubeSegment = cubeSegment;
         this.measureCount = cubeDesc.getMeasures().size();
-        this.totalShards = cubeSegment.getTotalShards();
     }
 
     @Override
@@ -63,19 +61,19 @@ public class MapContextGTRecordWriter implements ICuboidWriter {
         }
 
         cuboidRowCount++;
-        int preamble = RowConstants.ROWKEY_CUBOIDID_LEN + RowConstants.ROWKEY_SHARDID_LEN;
+        int preamble = RowConstants.ROWKEY_HEADER_LEN;
         int offSet = preamble;
         for (int x = 0; x < dimensions; x++) {
             System.arraycopy(record.get(x).array(), record.get(x).offset(), keyBuf, offSet, record.get(x).length());
             offSet += record.get(x).length();
         }
 
-        short shardForThisRec = 0;
-        if (totalShards != 0) {
-            shardForThisRec = ShardingHash.getShard(keyBuf, preamble, offSet, totalShards);
-        }
-        com.google.common.primitives.Bytes.
-        System.arraycopy(record.get(x).array(), record.get(x).offset(), keyBuf, offSet, record.get(x).length());
+        //fill shard
+        short cuboidShardNum = cubeSegment.getCuboidShardNum(cuboidId);
+        short shardOffset = ShardingHash.getShard(keyBuf, preamble, offSet - preamble, cuboidShardNum);
+        Short cuboidShardBase = cubeSegment.getCuboidBaseShard(cuboidId);
+        short finalShard = ShardingHash.getShard(cuboidShardBase, shardOffset, cubeSegment.getTotalShards());
+        BytesUtil.writeShort(finalShard, keyBuf, 0, RowConstants.ROWKEY_SHARDID_LEN);
 
         //output measures
         valueBuf.clear();
@@ -96,8 +94,7 @@ public class MapContextGTRecordWriter implements ICuboidWriter {
     }
 
     private void initVariables(Long cuboidId) {
-        bytesLength = RowConstants.ROWKEY_SHARDID_LEN;
-        bytesLength += RowConstants.ROWKEY_CUBOIDID_LEN;
+        bytesLength = RowConstants.ROWKEY_HEADER_LEN;
         Cuboid cuboid = Cuboid.findById(cubeDesc, cuboidId);
         for (TblColRef column : cuboid.getColumns()) {
             bytesLength += cubeSegment.getColumnLength(column);
@@ -110,6 +107,7 @@ public class MapContextGTRecordWriter implements ICuboidWriter {
             measureColumnsIndex[i] = dimensions + i;
         }
 
-        System.arraycopy(Bytes.toBytes(cuboidId), 0, keyBuf, RowConstants.ROWKEY_SHARDID_LEN, RowConstants.ROWKEY_CUBOIDID_LEN);
+        //write cuboid id first
+        BytesUtil.writeLong(cuboidId, keyBuf, RowConstants.ROWKEY_SHARDID_LEN, RowConstants.ROWKEY_CUBOIDID_LEN);
     }
 }

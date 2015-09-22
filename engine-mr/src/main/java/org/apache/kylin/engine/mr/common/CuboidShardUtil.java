@@ -21,7 +21,6 @@ package org.apache.kylin.engine.mr.common;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.collections4.map.DefaultedMap;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.cube.CubeManager;
 import org.apache.kylin.cube.CubeSegment;
@@ -35,9 +34,9 @@ import com.google.common.collect.Maps;
 public class CuboidShardUtil {
     protected static final Logger logger = LoggerFactory.getLogger(CuboidShardUtil.class);
 
-    public static Map<Long, Short> loadCuboidShards(CubeSegment segment) {
-        return DefaultedMap.defaultedMap(segment.getCuboidShards(), (short) 1);
-    }
+//    public static Map<Long, Short> loadCuboidShards(CubeSegment segment) {
+//        return DefaultedMap.defaultedMap(segment.getCuboidShards(), (short) 1);
+//    }
 
     public static void saveCuboidShards(CubeSegment segment, Map<Long, Short> cuboidShards,int totalShards) throws IOException {
         CubeManager cubeManager = CubeManager.getInstance(KylinConfig.getInstanceFromEnv());
@@ -53,7 +52,7 @@ public class CuboidShardUtil {
                 }
             }
         });
-        segment.setCuboidShards(filered);
+        segment.setCuboidShardNums(filered);
         segment.setTotalShards(totalShards);
 
         CubeUpdate cubeBuilder = new CubeUpdate(segment.getCubeInstance());

@@ -36,11 +36,9 @@ public class FuzzyMaskEncoder extends RowKeyEncoder {
     }
 
     @Override
-    protected int fillHeader(byte[] bytes, byte[][] values) {
+    protected int fillHeader(byte[] bytes) {
         // always fuzzy match cuboid ID to lock on the selected cuboid
-        int cuboidStart = this.headerLength - RowConstants.ROWKEY_CUBOIDID_LEN;
-        Arrays.fill(bytes, 0, cuboidStart, RowConstants.FUZZY_MASK_ONE);
-        Arrays.fill(bytes, cuboidStart, this.headerLength, RowConstants.FUZZY_MASK_ZERO);
+        Arrays.fill(bytes, 0, RowConstants.ROWKEY_HEADER_LEN, RowConstants.FUZZY_MASK_ZERO);
         return this.headerLength;
     }
 
