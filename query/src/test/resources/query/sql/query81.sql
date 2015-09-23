@@ -26,4 +26,4 @@ SELECT
  AND test_kylin_fact.lstg_site_id = test_category_groupings.site_id 
  where test_kylin_fact.cal_dt < DATE '2013-02-01' 
  group by 
- test_kylin_fact.seller_id order by sum(test_kylin_fact.price) desc limit 100
+ test_kylin_fact.seller_id order by sum(test_kylin_fact.price) desc limit 20
