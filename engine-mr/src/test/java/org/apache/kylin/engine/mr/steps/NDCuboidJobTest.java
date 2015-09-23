@@ -28,8 +28,10 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.kylin.common.util.LocalFileMetadataTestCase;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore("temporally disable it because it requires data in special format")
 public class NDCuboidJobTest extends LocalFileMetadataTestCase {
 
     private Configuration conf;
