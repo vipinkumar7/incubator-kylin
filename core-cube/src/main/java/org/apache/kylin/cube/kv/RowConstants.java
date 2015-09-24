@@ -43,6 +43,7 @@ public class RowConstants {
     public static final String ROWVALUE_DELIMITER_STRING = String.valueOf((char) 7);
     public static final byte[] ROWVALUE_DELIMITER_BYTES = { 7 };
 
+    public static final int ROWKEY_BUFFER_SIZE = 1024 * 1024; // 1 MB
     public static final int ROWVALUE_BUFFER_SIZE = 1024 * 1024; // 1 MB
 
     // marker class

@@ -52,7 +52,7 @@ public class HBaseStreamingOutput implements IStreamingOutput {
             CubeSegment cubeSegment = (CubeSegment) buildable;
             final HTableInterface hTable;
             hTable = createHTable(cubeSegment);
-            return new HBaseCuboidWriter(cubeSegment.getCubeDesc(), hTable);
+            return new HBaseCuboidWriter(cubeSegment, hTable);
         } catch (IOException e) {
             throw new RuntimeException("failed to get ICuboidWriter", e);
         }

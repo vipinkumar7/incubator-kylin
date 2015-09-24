@@ -45,12 +45,11 @@ import org.apache.kylin.dict.Dictionary;
 import org.apache.kylin.engine.mr.HadoopUtil;
 import org.apache.kylin.engine.mr.common.BatchConstants;
 import org.apache.kylin.engine.mr.common.CuboidStatsUtil;
-import org.apache.kylin.engine.mr.steps.FactDistinctColumnsReducer;
 import org.apache.kylin.metadata.model.SegmentStatusEnum;
 import org.apache.kylin.metadata.model.TblColRef;
+import org.apache.kylin.storage.hbase.steps.CubeHTableUtil;
 import org.apache.kylin.storage.hbase.steps.HBaseConnection;
 import org.apache.kylin.storage.hbase.steps.HBaseCuboidWriter;
-import org.apache.kylin.storage.hbase.steps.CubeHTableUtil;
 import org.apache.kylin.streaming.MicroStreamBatch;
 import org.apache.kylin.streaming.MicroStreamBatchConsumer;
 import org.slf4j.Logger;
@@ -108,7 +107,7 @@ public class CubeStreamConsumer implements MicroStreamBatchConsumer {
 
         InMemCubeBuilder inMemCubeBuilder = new InMemCubeBuilder(cubeInstance.getDescriptor(), realDictMap);
         final HTableInterface hTable = createHTable(cubeSegment);
-        final HBaseCuboidWriter gtRecordWriter = new HBaseCuboidWriter(cubeDesc, hTable);
+        final HBaseCuboidWriter gtRecordWriter = new HBaseCuboidWriter(cubeSegment, hTable);
 
         executorService.submit(inMemCubeBuilder.buildAsRunnable(blockingQueue, gtRecordWriter)).get();
         gtRecordWriter.flush();
