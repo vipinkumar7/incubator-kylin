@@ -250,19 +250,19 @@ public class CreateHTableJob extends AbstractHadoopJob {
 
         logger.info("Cube capacity " + cubeCapacity.toString() + ", chosen cut for HTable is " + cut + "GB");
 
-        long totalSizeInM = 0;
+        double totalSizeInM = 0;
 
         List<Long> allCuboids = Lists.newArrayList();
         allCuboids.addAll(cubeRowCountMap.keySet());
         Collections.sort(allCuboids);
 
-        Map<Long, Long> cubeSizeMap = Maps.transformEntries(cubeRowCountMap, new Maps.EntryTransformer<Long, Long, Long>() {
+        Map<Long, Double> cubeSizeMap = Maps.transformEntries(cubeRowCountMap, new Maps.EntryTransformer<Long, Long, Double>() {
             @Override
-            public Long transformEntry(@Nullable Long key, @Nullable Long value) {
+            public Double transformEntry(@Nullable Long key, @Nullable Long value) {
                 return estimateCuboidStorageSize(cubeDesc, key, value, baseCuboidId, rowkeyColumnSize);
             }
         });
-        for (Long cuboidSize : cubeSizeMap.values()) {
+        for (Double cuboidSize : cubeSizeMap.values()) {
             totalSizeInM += cuboidSize;
         }
 
@@ -270,14 +270,22 @@ public class CreateHTableJob extends AbstractHadoopJob {
         nRegion = Math.max(kylinConfig.getHBaseRegionCountMin(), nRegion);
         nRegion = Math.min(kylinConfig.getHBaseRegionCountMax(), nRegion);
 
-        //TODO: remove nRegion > 1 so that even small cubes will have at least two regions
-        if (ENABLE_CUBOID_SHARDING && (nRegion > 1)) {
+        if (ENABLE_CUBOID_SHARDING) {//&& (nRegion > 1)) {
             //use prime nRegions to help random sharding
+            int original = nRegion;
             nRegion = Primes.nextPrime(nRegion);//return 2 for input 1
-            logger.info("Region count is adjusted to " + nRegion + " to help random sharding");
+
+            if (nRegion > Short.MAX_VALUE) {
+                logger.info("Too many regions! reduce to " + Short.MAX_VALUE);
+                nRegion = Short.MAX_VALUE;
+            }
+
+            if (nRegion != original) {
+                logger.info("Region count is adjusted from " + original + " to " + nRegion + " to help random sharding");
+            }
         }
 
-        int mbPerRegion = (int) (totalSizeInM / (nRegion));
+        int mbPerRegion = (int) (totalSizeInM / nRegion);
         mbPerRegion = Math.max(1, mbPerRegion);
 
         logger.info("Total size " + totalSizeInM + "M (estimated)");
@@ -287,17 +295,20 @@ public class CreateHTableJob extends AbstractHadoopJob {
         if (ENABLE_CUBOID_SHARDING) {
             //each cuboid will be split into different number of shards
             HashMap<Long, Short> cuboidShards = Maps.newHashMap();
-            long[] regionSizes = new long[nRegion];
+            double[] regionSizes = new double[nRegion];
             for (long cuboidId : allCuboids) {
-                long estimatedSize = cubeSizeMap.get(cuboidId);
-                double magic = Math.PI;
-                int shard = (int) (1.0 * estimatedSize / mbPerRegion * magic);
-                if (shard == 0) {
+                double estimatedSize = cubeSizeMap.get(cuboidId);
+                double magic = 10;
+                int shard = (int) (1.0 * estimatedSize * magic / mbPerRegion);
+                if (shard < 1) {
                     shard = 1;
                 }
-                if (shard > Short.MAX_VALUE) {
-                    logger.info(String.format("Cuboid %d 's estimated size %d MB will generate %d regions, reduce to %d", cuboidId, estimatedSize, shard, Short.MAX_VALUE));
-                    shard = Short.MAX_VALUE;
+
+                if (shard > nRegion) {
+                    logger.info(String.format("Cuboid %d 's estimated size %0.2f MB will generate %d regions, reduce to %d", cuboidId, estimatedSize, shard, nRegion));
+                    shard = nRegion;
+                } else {
+                    logger.info(String.format("Cuboid %d 's estimated size %0.2f MB will generate %d regions", cuboidId, estimatedSize, shard));
                 }
 
                 cuboidShards.put(cuboidId, (short) shard);
@@ -309,7 +320,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
             }
 
             for (int i = 0; i < nRegion; ++i) {
-                logger.info(String.format("Region %d's estimated size is %d MB, accounting for %0.2f percent", i, regionSizes[i], 100.0 * regionSizes[i] / totalSizeInM));
+                logger.info(String.format("Region %d's estimated size is %0.2f MB, accounting for %0.2f percent", i, regionSizes[i], 100.0 * regionSizes[i] / totalSizeInM));
             }
 
             CuboidShardUtil.saveCuboidShards(cubeSegment, cuboidShards, nRegion);
@@ -353,7 +364,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
      * @param rowCount
      * @return the cuboid size in M bytes
      */
-    private static long estimateCuboidStorageSize(CubeDesc cubeDesc, long cuboidId, long rowCount, long baseCuboidId, List<Integer> rowKeyColumnLength) {
+    private static double estimateCuboidStorageSize(CubeDesc cubeDesc, long cuboidId, long rowCount, long baseCuboidId, List<Integer> rowKeyColumnLength) {
 
         int bytesLength = RowConstants.ROWKEY_HEADER_LEN;
 
@@ -380,8 +391,9 @@ public class CreateHTableJob extends AbstractHadoopJob {
         bytesLength += space;
 
         logger.info("Cuboid " + cuboidId + " has " + rowCount + " rows, each row size is " + bytesLength + " bytes.");
-        logger.info("Cuboid " + cuboidId + " total size is " + (bytesLength * rowCount / (1024L * 1024L)) + "M.");
-        return bytesLength * rowCount / (1024L * 1024L);
+        double ret = 1.0 * (bytesLength * rowCount / (1024L * 1024L));
+        logger.info("Cuboid " + cuboidId + " total size is " + ret + "M.");
+        return ret;
     }
 
     public static void main(String[] args) throws Exception {

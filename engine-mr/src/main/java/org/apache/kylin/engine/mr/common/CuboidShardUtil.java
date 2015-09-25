@@ -34,11 +34,11 @@ import com.google.common.collect.Maps;
 public class CuboidShardUtil {
     protected static final Logger logger = LoggerFactory.getLogger(CuboidShardUtil.class);
 
-//    public static Map<Long, Short> loadCuboidShards(CubeSegment segment) {
-//        return DefaultedMap.defaultedMap(segment.getCuboidShards(), (short) 1);
-//    }
+    //    public static Map<Long, Short> loadCuboidShards(CubeSegment segment) {
+    //        return DefaultedMap.defaultedMap(segment.getCuboidShards(), (short) 1);
+    //    }
 
-    public static void saveCuboidShards(CubeSegment segment, Map<Long, Short> cuboidShards,int totalShards) throws IOException {
+    public static void saveCuboidShards(CubeSegment segment, Map<Long, Short> cuboidShards, int totalShards) throws IOException {
         CubeManager cubeManager = CubeManager.getInstance(KylinConfig.getInstanceFromEnv());
         Map<Long, Short> filered = Maps.filterEntries(cuboidShards, new Predicate<Map.Entry<Long, Short>>() {
             @Override

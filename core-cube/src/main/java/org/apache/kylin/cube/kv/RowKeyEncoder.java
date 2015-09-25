@@ -112,7 +112,7 @@ public class RowKeyEncoder extends AbstractRowKeyEncoder {
         if (this.headerLength != offset) {
             throw new IllegalStateException("Expected header length is " + headerLength + ". But the offset is " + offset);
         }
-
+        
         return offset;
     }
 

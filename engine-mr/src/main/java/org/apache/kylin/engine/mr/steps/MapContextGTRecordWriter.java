@@ -71,7 +71,7 @@ public class MapContextGTRecordWriter implements ICuboidWriter {
         //fill shard
         short cuboidShardNum = cubeSegment.getCuboidShardNum(cuboidId);
         short shardOffset = ShardingHash.getShard(keyBuf, header, offSet - header, cuboidShardNum);
-        Short cuboidShardBase = cubeSegment.getCuboidBaseShard(cuboidId);
+        short cuboidShardBase = cubeSegment.getCuboidBaseShard(cuboidId);
         short finalShard = ShardingHash.getShard(cuboidShardBase, shardOffset, cubeSegment.getTotalShards());
         BytesUtil.writeShort(finalShard, keyBuf, 0, RowConstants.ROWKEY_SHARDID_LEN);
 
