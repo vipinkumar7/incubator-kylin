@@ -21,9 +21,13 @@ package org.apache.kylin.storage.hbase.cube.v2;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.DataFormatException;
 
 import javax.annotation.Nullable;
@@ -43,13 +47,14 @@ import org.apache.kylin.gridtable.GTInfo;
 import org.apache.kylin.gridtable.GTRecord;
 import org.apache.kylin.gridtable.GTScanRequest;
 import org.apache.kylin.gridtable.IGTScanner;
+import org.apache.kylin.storage.hbase.cube.v2.coprocessor.endpoint.generated.CubeVisitProtos;
 import org.apache.kylin.storage.hbase.steps.HBaseConnection;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import org.apache.kylin.storage.hbase.cube.v2.coprocessor.endpoint.generated.CubeVisitProtos;
 
 public class CubeHBaseEndpointRPC extends CubeHBaseRPC {
 
@@ -122,40 +127,61 @@ public class CubeHBaseEndpointRPC extends CubeHBaseRPC {
     @Override
     public IGTScanner getGTScanner(final GTScanRequest scanRequest) throws IOException {
 
-        try {
-            // primary key (also the 0th column block) is always selected
-            final ImmutableBitSet selectedColBlocks = scanRequest.getSelectedColBlocks().set(0);
-            // globally shared connection, does not require close
-            HConnection hbaseConn = HBaseConnection.get(cubeSeg.getCubeInstance().getConfig().getStorageUrl());
-            final HTableInterface hbaseTable = hbaseConn.getTable(cubeSeg.getStorageLocationIdentifier());
-            final List<Pair<byte[], byte[]>> hbaseColumns = makeHBaseColumns(selectedColBlocks);
+        // primary key (also the 0th column block) is always selected
+        final ImmutableBitSet selectedColBlocks = scanRequest.getSelectedColBlocks().set(0);
+        // globally shared connection, does not require close
+        HConnection hbaseConn = HBaseConnection.get(cubeSeg.getCubeInstance().getConfig().getStorageUrl());
+        final HTableInterface hbaseTable = hbaseConn.getTable(cubeSeg.getStorageLocationIdentifier());
+        final List<Pair<byte[], byte[]>> hbaseColumns = makeHBaseColumns(selectedColBlocks);
 
-            RawScan rawScan = prepareRawScan(scanRequest.getPkStart(), scanRequest.getPkEnd(), hbaseColumns);
+        List<RawScan> rawScans = prepareRawScan(scanRequest.getPkStart(), scanRequest.getPkEnd(), hbaseColumns);
 
-            byte[] scanRequestBytes = KryoUtils.serialize(scanRequest);
-            byte[] rawScanBytes = KryoUtils.serialize(rawScan);
-            CubeVisitProtos.CubeVisitRequest.Builder builder = CubeVisitProtos.CubeVisitRequest.newBuilder();
-            builder.setGtScanRequest(ByteString.copyFrom(scanRequestBytes)).setHbaseRawScan(ByteString.copyFrom(rawScanBytes));
+        byte[] scanRequestBytes = KryoUtils.serialize(scanRequest);
+        final ByteString scanRequestBytesString = ByteString.copyFrom(scanRequestBytes);
 
-            Collection<CubeVisitProtos.CubeVisitResponse> results = getResults(builder.build(), hbaseTable, rawScan.startKey, rawScan.endKey);
-            final Collection<byte[]> rowBlocks = Collections2.transform(results, new Function<CubeVisitProtos.CubeVisitResponse, byte[]>() {
-                @Nullable
+        ExecutorService executorService = Executors.newFixedThreadPool(rawScans.size());
+        final List<byte[]> rowBlocks = Collections.synchronizedList(Lists.<byte[]> newArrayList());
+
+        for (final RawScan rawScan : rawScans) {
+            executorService.submit(new Runnable() {
                 @Override
-                public byte[] apply(CubeVisitProtos.CubeVisitResponse input) {
+                public void run() {
+                    final byte[] rawScanBytes = KryoUtils.serialize(rawScan);
+                    CubeVisitProtos.CubeVisitRequest.Builder builder = CubeVisitProtos.CubeVisitRequest.newBuilder();
+                    builder.setGtScanRequest(scanRequestBytesString).setHbaseRawScan(ByteString.copyFrom(rawScanBytes));
+
+                    Collection<CubeVisitProtos.CubeVisitResponse> results;
                     try {
-                        return CompressionUtils.decompress(input.getCompressedRows().toByteArray());
-                    } catch (IOException | DataFormatException e) {
-                        throw new RuntimeException(e);
+                        results = getResults(builder.build(), hbaseTable, rawScan.startKey, rawScan.endKey);
+                    } catch (Throwable throwable) {
+                        throw new RuntimeException("Error when visiting cubes by endpoint:", throwable);
                     }
+
+                    Collection<byte[]> part = Collections2.transform(results, new Function<CubeVisitProtos.CubeVisitResponse, byte[]>() {
+                        @Nullable
+                        @Override
+                        public byte[] apply(CubeVisitProtos.CubeVisitResponse input) {
+                            try {
+                                return CompressionUtils.decompress(input.getCompressedRows().toByteArray());
+                            } catch (IOException | DataFormatException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
+                    rowBlocks.addAll(part);
                 }
             });
-
-            return new EndpintResultsAsGTScanner(fullGTInfo, rowBlocks.iterator());
-
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
         }
-        return null;
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
+                throw new RuntimeException("Visiting cube by endpoint timeout");
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Visiting cube by endpoint gets interrupted");
+        }
+
+        return new EndpintResultsAsGTScanner(fullGTInfo, rowBlocks.iterator());
     }
 
     //TODO : async callback

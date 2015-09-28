@@ -20,6 +20,9 @@ import org.apache.kylin.gridtable.IGTScanner;
 import org.apache.kylin.gridtable.IGTStore;
 import org.apache.kylin.storage.hbase.steps.HBaseConnection;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+
 /**
  * for test use only
  */
@@ -41,27 +44,40 @@ public class CubeHBaseScanRPC extends CubeHBaseRPC {
         final HTableInterface hbaseTable = hbaseConn.getTable(cubeSeg.getStorageLocationIdentifier());
         final List<Pair<byte[], byte[]>> hbaseColumns = makeHBaseColumns(selectedColBlocks);
 
-        RawScan rawScan = prepareRawScan(scanRequest.getPkStart(), scanRequest.getPkEnd(), hbaseColumns);
-        Scan hbaseScan = buildScan(rawScan);
+        List<RawScan> rawScans = prepareRawScan(scanRequest.getPkStart(), scanRequest.getPkEnd(), hbaseColumns);
 
-        final ResultScanner scanner = hbaseTable.getScanner(hbaseScan);
-        final Iterator<Result> iterator = scanner.iterator();
+        final List<ResultScanner> scanners = Lists.newArrayList();
+        final List<Iterator<Result>> resultIterators = Lists.newArrayList();
+
+        for (RawScan rawScan : rawScans) {
+            Scan hbaseScan = buildScan(rawScan);
+
+            final ResultScanner scanner = hbaseTable.getScanner(hbaseScan);
+            final Iterator<Result> iterator = scanner.iterator();
+
+            scanners.add(scanner);
+            resultIterators.add(iterator);
+        }
+
+        final Iterator<Result> allResultsIterator = Iterators.concat(resultIterators.iterator());
 
         CellListIterator cellListIterator = new CellListIterator() {
             @Override
             public void close() throws IOException {
-                scanner.close();
+                for (ResultScanner scanner : scanners) {
+                    scanner.close();
+                }
                 hbaseTable.close();
             }
 
             @Override
             public boolean hasNext() {
-                return iterator.hasNext();
+                return allResultsIterator.hasNext();
             }
 
             @Override
             public List<Cell> next() {
-                return iterator.next().listCells();
+                return allResultsIterator.next().listCells();
             }
 
             @Override

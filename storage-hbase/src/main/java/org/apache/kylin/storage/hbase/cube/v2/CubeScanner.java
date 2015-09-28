@@ -201,7 +201,7 @@ public class CubeScanner implements IGTScanner {
                             return false;
 
                         try {
-                            CubeHBaseRPC rpc = new CubeHBaseEndpointRPC(cubeSeg, cuboid, info);
+                            CubeHBaseRPC rpc = new CubeHBaseScanRPC(cubeSeg, cuboid, info);
                             inputScanners[cur] = rpc.getGTScanner(scanRequests.get(cur));
                             curIterator = inputScanners[cur].iterator();
                             //curIterator = new RemoteGTRecordAdapter(info, inputScanners[cur].iterator()).iterator();

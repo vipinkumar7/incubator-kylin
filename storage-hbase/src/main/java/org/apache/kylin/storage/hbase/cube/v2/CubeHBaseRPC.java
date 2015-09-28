@@ -14,6 +14,7 @@ import org.apache.kylin.common.util.Bytes;
 import org.apache.kylin.common.util.BytesUtil;
 import org.apache.kylin.common.util.ImmutableBitSet;
 import org.apache.kylin.common.util.Pair;
+import org.apache.kylin.common.util.ShardingHash;
 import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.cuboid.Cuboid;
 import org.apache.kylin.cube.kv.RowConstants;
@@ -69,13 +70,27 @@ public abstract class CubeHBaseRPC {
         return scan;
     }
 
-    protected RawScan prepareRawScan(GTRecord pkStart, GTRecord pkEnd, List<Pair<byte[], byte[]>> selectedColumns) {
+    protected List<RawScan> prepareRawScan(GTRecord pkStart, GTRecord pkEnd, List<Pair<byte[], byte[]>> selectedColumns) {
+        List<RawScan> ret = Lists.newArrayList();
+
         byte[] start = makeRowKeyToScan(pkStart, (byte) 0x00);
         byte[] end = makeRowKeyToScan(pkEnd, (byte) 0xff);
 
         //TODO fuzzy match
 
-        return new RawScan(start, end, selectedColumns, null);
+        short cuboidShardNum = cubeSeg.getCuboidShardNum(cuboid.getId());
+
+        for (short i = 0; i < cuboidShardNum; ++i) {
+            short shard = ShardingHash.getShard(cubeSeg.getCuboidBaseShard(cuboid.getId()), i, cubeSeg.getTotalShards());
+            byte[] shardStart = Arrays.copyOf(start, start.length);
+            byte[] shardEnd = Arrays.copyOf(end, end.length);
+            BytesUtil.writeShort(shard, shardStart, 0, RowConstants.ROWKEY_SHARDID_LEN);
+            BytesUtil.writeShort(shard, shardEnd, 0, RowConstants.ROWKEY_SHARDID_LEN);
+
+            ret.add(new RawScan(shardStart, shardEnd, selectedColumns, null));
+        }
+        return ret;
+
     }
 
     private byte[] makeRowKeyToScan(GTRecord pkRec, byte fill) {
@@ -85,9 +100,12 @@ public abstract class CubeHBaseRPC {
         byte[] buf = new byte[pkMaxLen + RowConstants.ROWKEY_CUBOIDID_LEN];
         Arrays.fill(buf, fill);
 
-        System.arraycopy(cuboid.getBytes(), 0, buf, 0, RowConstants.ROWKEY_CUBOIDID_LEN);
+        //for scanning/reading, later all possbile shard will be applied 
+        //BytesUtil.writeShort((short) 0, buf, 0, RowConstants.ROWKEY_SHARDID_LEN);
+
+        System.arraycopy(cuboid.getBytes(), 0, buf, RowConstants.ROWKEY_SHARDID_LEN, RowConstants.ROWKEY_CUBOIDID_LEN);
         if (pk != null && pk.array() != null) {
-            System.arraycopy(pk.array(), pk.offset(), buf, RowConstants.ROWKEY_CUBOIDID_LEN, pk.length());
+            System.arraycopy(pk.array(), pk.offset(), buf, RowConstants.ROWKEY_HEADER_LEN, pk.length());
         }
         return buf;
     }
