@@ -256,12 +256,12 @@ public class CreateHTableJob extends AbstractHadoopJob {
         allCuboids.addAll(cubeRowCountMap.keySet());
         Collections.sort(allCuboids);
 
-        Map<Long, Double> cubeSizeMap = Maps.transformEntries(cubeRowCountMap, new Maps.EntryTransformer<Long, Long, Double>() {
+        Map<Long, Double> cubeSizeMap = Maps.newHashMap(Maps.transformEntries(cubeRowCountMap, new Maps.EntryTransformer<Long, Long, Double>() {
             @Override
             public Double transformEntry(@Nullable Long key, @Nullable Long value) {
                 return estimateCuboidStorageSize(cubeDesc, key, value, baseCuboidId, rowkeyColumnSize);
             }
-        });
+        }));
         for (Double cuboidSize : cubeSizeMap.values()) {
             totalSizeInM += cuboidSize;
         }
@@ -298,7 +298,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
             double[] regionSizes = new double[nRegion];
             for (long cuboidId : allCuboids) {
                 double estimatedSize = cubeSizeMap.get(cuboidId);
-                double magic = 13;
+                double magic = 23;
                 int shardNum = (int) (1.0 * estimatedSize * magic / mbPerRegion);
                 if (shardNum < 1) {
                     shardNum = 1;
@@ -390,9 +390,8 @@ public class CreateHTableJob extends AbstractHadoopJob {
         }
         bytesLength += space;
 
-        logger.info("Cuboid " + cuboidId + " has " + rowCount + " rows, each row size is " + bytesLength + " bytes.");
         double ret = 1.0 * bytesLength * rowCount / (1024L * 1024L);
-        logger.info("Cuboid " + cuboidId + " total size is " + ret + "M.");
+        logger.info("Cuboid " + cuboidId + " has " + rowCount + " rows, each row size is " + bytesLength + " bytes." + " Total size is " + ret + "M.");
         return ret;
     }
 

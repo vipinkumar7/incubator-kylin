@@ -40,7 +40,7 @@ public class CuboidShardUtil {
 
     public static void saveCuboidShards(CubeSegment segment, Map<Long, Short> cuboidShards, int totalShards) throws IOException {
         CubeManager cubeManager = CubeManager.getInstance(KylinConfig.getInstanceFromEnv());
-        Map<Long, Short> filered = Maps.filterEntries(cuboidShards, new Predicate<Map.Entry<Long, Short>>() {
+        Map<Long, Short> filered = Maps.newHashMap(Maps.filterEntries(cuboidShards, new Predicate<Map.Entry<Long, Short>>() {
             @Override
             public boolean apply(Map.Entry<Long, Short> input) {
                 if (input.getValue() <= 1) {
@@ -51,7 +51,7 @@ public class CuboidShardUtil {
                     return true;
                 }
             }
-        });
+        }));
         segment.setCuboidShardNums(filered);
         segment.setTotalShards(totalShards);
 
