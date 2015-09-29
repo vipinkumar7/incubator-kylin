@@ -256,12 +256,11 @@ public class CreateHTableJob extends AbstractHadoopJob {
         allCuboids.addAll(cubeRowCountMap.keySet());
         Collections.sort(allCuboids);
 
-        Map<Long, Double> cubeSizeMap = Maps.newHashMap(Maps.transformEntries(cubeRowCountMap, new Maps.EntryTransformer<Long, Long, Double>() {
-            @Override
-            public Double transformEntry(@Nullable Long key, @Nullable Long value) {
-                return estimateCuboidStorageSize(cubeDesc, key, value, baseCuboidId, rowkeyColumnSize);
-            }
-        }));
+        Map<Long, Double> cubeSizeMap = Maps.newHashMap();
+        for (Map.Entry<Long, Long> entry : cubeRowCountMap.entrySet()) { 
+            cubeSizeMap.put(entry.getKey(),estimateCuboidStorageSize(cubeDesc, entry.getKey(), entry.getValue(), baseCuboidId, rowkeyColumnSize));
+        }
+
         for (Double cuboidSize : cubeSizeMap.values()) {
             totalSizeInM += cuboidSize;
         }

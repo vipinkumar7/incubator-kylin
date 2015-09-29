@@ -28,30 +28,24 @@ import org.apache.kylin.cube.CubeUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 
 public class CuboidShardUtil {
     protected static final Logger logger = LoggerFactory.getLogger(CuboidShardUtil.class);
 
-    //    public static Map<Long, Short> loadCuboidShards(CubeSegment segment) {
-    //        return DefaultedMap.defaultedMap(segment.getCuboidShards(), (short) 1);
-    //    }
-
     public static void saveCuboidShards(CubeSegment segment, Map<Long, Short> cuboidShards, int totalShards) throws IOException {
         CubeManager cubeManager = CubeManager.getInstance(KylinConfig.getInstanceFromEnv());
-        Map<Long, Short> filered = Maps.newHashMap(Maps.filterEntries(cuboidShards, new Predicate<Map.Entry<Long, Short>>() {
-            @Override
-            public boolean apply(Map.Entry<Long, Short> input) {
-                if (input.getValue() <= 1) {
-                    logger.info("Cuboid {} has {} shards, skip saving it as an optimization", input.getKey(), input.getValue());
-                    return false;
-                } else {
-                    logger.info("Cuboid {} has {} shards, saving it", input.getKey(), input.getValue());
-                    return true;
-                }
+
+        Map<Long, Short> filered = Maps.newHashMap();
+        for (Map.Entry<Long, Short> entry : cuboidShards.entrySet()) {
+            if (entry.getValue() <= 1) {
+                logger.info("Cuboid {} has {} shards, skip saving it as an optimization", entry.getKey(), entry.getValue());
+            } else {
+                logger.info("Cuboid {} has {} shards, saving it", entry.getKey(), entry.getValue());
+                filered.put(entry.getKey(), entry.getValue());
             }
-        }));
+        }
+
         segment.setCuboidShardNums(filered);
         segment.setTotalShards(totalShards);
 

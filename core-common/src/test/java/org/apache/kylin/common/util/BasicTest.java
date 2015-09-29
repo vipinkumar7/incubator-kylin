@@ -25,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.IdentityHashMap;
+import java.util.Map;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.junit.Assert;
@@ -32,7 +33,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.TreeMultiset;
 
 /**
@@ -64,9 +67,6 @@ public class BasicTest {
 
     @Test
     public void testxx() {
-        short x = -64;
-        int y = (int)x;
-        System.out.println(y);
     }
 
     @Test
