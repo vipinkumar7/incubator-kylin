@@ -299,23 +299,23 @@ public class CreateHTableJob extends AbstractHadoopJob {
             for (long cuboidId : allCuboids) {
                 double estimatedSize = cubeSizeMap.get(cuboidId);
                 double magic = 13;
-                int shard = (int) (1.0 * estimatedSize * magic / mbPerRegion);
-                if (shard < 1) {
-                    shard = 1;
+                int shardNum = (int) (1.0 * estimatedSize * magic / mbPerRegion);
+                if (shardNum < 1) {
+                    shardNum = 1;
                 }
 
-                if (shard > nRegion) {
-                    logger.info(String.format("Cuboid %d 's estimated size %.2f MB will generate %d regions, reduce to %d", cuboidId, estimatedSize, shard, nRegion));
-                    shard = nRegion;
+                if (shardNum > nRegion) {
+                    logger.info(String.format("Cuboid %d 's estimated size %.2f MB will generate %d regions, reduce to %d", cuboidId, estimatedSize, shardNum, nRegion));
+                    shardNum = nRegion;
                 } else {
-                    logger.info(String.format("Cuboid %d 's estimated size %.2f MB will generate %d regions", cuboidId, estimatedSize, shard));
+                    logger.info(String.format("Cuboid %d 's estimated size %.2f MB will generate %d regions", cuboidId, estimatedSize, shardNum));
                 }
 
-                cuboidShards.put(cuboidId, (short) shard);
+                cuboidShards.put(cuboidId, (short) shardNum);
                 short startShard = ShardingHash.getShard(cuboidId, nRegion);
-                for (short i = startShard; i < startShard + shard; ++i) {
+                for (short i = startShard; i < startShard + shardNum; ++i) {
                     short j = (short) (i % nRegion);
-                    regionSizes[j] = regionSizes[j] + estimatedSize / shard;
+                    regionSizes[j] = regionSizes[j] + estimatedSize / shardNum;
                 }
             }
 
@@ -391,7 +391,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
         bytesLength += space;
 
         logger.info("Cuboid " + cuboidId + " has " + rowCount + " rows, each row size is " + bytesLength + " bytes.");
-        double ret = 1.0 * (bytesLength * rowCount / (1024L * 1024L));
+        double ret = 1.0 * bytesLength * rowCount / (1024L * 1024L);
         logger.info("Cuboid " + cuboidId + " total size is " + ret + "M.");
         return ret;
     }
