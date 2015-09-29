@@ -15,6 +15,7 @@ import org.apache.kylin.common.util.Pair;
 import org.apache.kylin.cube.CubeSegment;
 import org.apache.kylin.cube.cuboid.Cuboid;
 import org.apache.kylin.gridtable.GTInfo;
+import org.apache.kylin.gridtable.GTRecord;
 import org.apache.kylin.gridtable.GTScanRequest;
 import org.apache.kylin.gridtable.IGTScanner;
 import org.apache.kylin.gridtable.IGTStore;
@@ -27,6 +28,38 @@ import com.google.common.collect.Lists;
  * for test use only
  */
 public class CubeHBaseScanRPC extends CubeHBaseRPC {
+
+    static class TrimmedInfoGTRecordAdapter implements Iterable<GTRecord> {
+
+        private final GTInfo info;
+        private final Iterator<GTRecord> input;
+
+        public TrimmedInfoGTRecordAdapter(GTInfo info, Iterator<GTRecord> input) {
+            this.info = info;
+            this.input = input;
+        }
+
+        @Override
+        public Iterator<GTRecord> iterator() {
+            return new Iterator<GTRecord>() {
+                @Override
+                public boolean hasNext() {
+                    return input.hasNext();
+                }
+
+                @Override
+                public GTRecord next() {
+                    GTRecord x = input.next();
+                    return new GTRecord(info, x.getInternal());
+                }
+
+                @Override
+                public void remove() {
+
+                }
+            };
+        }
+    }
 
     public CubeHBaseScanRPC(CubeSegment cubeSeg, Cuboid cuboid, GTInfo fullGTInfo) {
         super(cubeSeg, cuboid, fullGTInfo);
@@ -88,6 +121,30 @@ public class CubeHBaseScanRPC extends CubeHBaseRPC {
 
         IGTStore store = new HBaseReadonlyStore(cellListIterator, scanRequest, hbaseColumns);
         IGTScanner rawScanner = store.scan(scanRequest);
-        return scanRequest.decorateScanner(rawScanner);
+
+        final IGTScanner decorateScanner = scanRequest.decorateScanner(rawScanner);
+        final TrimmedInfoGTRecordAdapter trimmedInfoGTRecordAdapter = new TrimmedInfoGTRecordAdapter(fullGTInfo, decorateScanner.iterator());
+
+        return new IGTScanner() {
+            @Override
+            public GTInfo getInfo() {
+                return fullGTInfo;
+            }
+
+            @Override
+            public int getScannedRowCount() {
+                return decorateScanner.getScannedRowCount();
+            }
+
+            @Override
+            public void close() throws IOException {
+                decorateScanner.close();
+            }
+
+            @Override
+            public Iterator<GTRecord> iterator() {
+                return trimmedInfoGTRecordAdapter.iterator();
+            }
+        };
     }
 }

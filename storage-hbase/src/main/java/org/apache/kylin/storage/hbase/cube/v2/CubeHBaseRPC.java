@@ -97,7 +97,7 @@ public abstract class CubeHBaseRPC {
         ByteArray pk = GTRecord.exportScanKey(pkRec);
         int pkMaxLen = pkRec.getInfo().getMaxColumnLength(pkRec.getInfo().getPrimaryKey());
 
-        byte[] buf = new byte[pkMaxLen + RowConstants.ROWKEY_CUBOIDID_LEN];
+        byte[] buf = new byte[pkMaxLen + RowConstants.ROWKEY_HEADER_LEN];
         Arrays.fill(buf, fill);
 
         //for scanning/reading, later all possbile shard will be applied 

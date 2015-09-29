@@ -150,37 +150,7 @@ public class CubeScanner implements IGTScanner {
         return scanner.getScannedRowCount();
     }
 
-    static class RemoteGTRecordAdapter implements Iterable<GTRecord> {
-
-        private final GTInfo info;
-        private final Iterator<GTRecord> input;
-
-        public RemoteGTRecordAdapter(GTInfo info, Iterator<GTRecord> input) {
-            this.info = info;
-            this.input = input;
-        }
-
-        @Override
-        public Iterator<GTRecord> iterator() {
-            return new Iterator<GTRecord>() {
-                @Override
-                public boolean hasNext() {
-                    return input.hasNext();
-                }
-
-                @Override
-                public GTRecord next() {
-                    GTRecord x = input.next();
-                    return new GTRecord(info, x.getInternal());
-                }
-
-                @Override
-                public void remove() {
-
-                }
-            };
-        }
-    }
+   
 
     private class Scanner {
         final IGTScanner[] inputScanners = new IGTScanner[scanRequests.size()];
@@ -204,7 +174,6 @@ public class CubeScanner implements IGTScanner {
                             CubeHBaseRPC rpc = new CubeHBaseScanRPC(cubeSeg, cuboid, info);
                             inputScanners[cur] = rpc.getGTScanner(scanRequests.get(cur));
                             curIterator = inputScanners[cur].iterator();
-                            //curIterator = new RemoteGTRecordAdapter(info, inputScanners[cur].iterator()).iterator();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
