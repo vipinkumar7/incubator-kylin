@@ -257,8 +257,8 @@ public class CreateHTableJob extends AbstractHadoopJob {
         Collections.sort(allCuboids);
 
         Map<Long, Double> cubeSizeMap = Maps.newHashMap();
-        for (Map.Entry<Long, Long> entry : cubeRowCountMap.entrySet()) { 
-            cubeSizeMap.put(entry.getKey(),estimateCuboidStorageSize(cubeDesc, entry.getKey(), entry.getValue(), baseCuboidId, rowkeyColumnSize));
+        for (Map.Entry<Long, Long> entry : cubeRowCountMap.entrySet()) {
+            cubeSizeMap.put(entry.getKey(), estimateCuboidStorageSize(cubeDesc, entry.getKey(), entry.getValue(), baseCuboidId, rowkeyColumnSize));
         }
 
         for (Double cuboidSize : cubeSizeMap.values()) {
@@ -298,7 +298,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
             for (long cuboidId : allCuboids) {
                 double estimatedSize = cubeSizeMap.get(cuboidId);
                 double magic = 23;
-                int shardNum = (int) (1.0 * estimatedSize * magic / mbPerRegion);
+                int shardNum = (int) (1.0 * estimatedSize * magic / mbPerRegion + 1);
                 if (shardNum < 1) {
                     shardNum = 1;
                 }
