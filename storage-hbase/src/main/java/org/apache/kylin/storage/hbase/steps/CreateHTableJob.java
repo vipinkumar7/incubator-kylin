@@ -298,7 +298,7 @@ public class CreateHTableJob extends AbstractHadoopJob {
             double[] regionSizes = new double[nRegion];
             for (long cuboidId : allCuboids) {
                 double estimatedSize = cubeSizeMap.get(cuboidId);
-                double magic = 10;
+                double magic = 13;
                 int shard = (int) (1.0 * estimatedSize * magic / mbPerRegion);
                 if (shard < 1) {
                     shard = 1;
