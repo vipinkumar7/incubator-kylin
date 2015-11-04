@@ -39,6 +39,7 @@ limitations under the License. See accompanying LICENSE file.
         <param-value>
             classpath:applicationContext.xml
             classpath:kylinSecurity.xml
+            classpath:Kylin-oauth-security.xml
             classpath*:kylin-*-plugin.xml
         </param-value>
     </context-param>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oauth="http://www.springframework.org/schema/security/oauth2"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security/oauth2 http://www.springframework.org/schema/security/spring-security-oauth2.xsd
+		http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd
+		http://www.springframework.org/schema/security/oauth http://www.springframework.org/schema/security/spring-security-oauth-1.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+	
+	<bean id="accessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased"
+		xmlns="http://www.springframework.org/schema/beans">
+		<constructor-arg>
+			<list>
+				<bean class="org.springframework.security.oauth2.provider.vote.ScopeVoter" />
+				<bean class="org.springframework.security.access.vote.RoleVoter" />
+				<bean class="org.springframework.security.access.vote.AuthenticatedVoter" />
+			</list>
+		</constructor-arg>
+	</bean>
+
+
+	<!-- ============================== -->
+	<!-- OAUTH 2 : AUTHORIZATION SERVER -->
+	<!-- ============================== -->
+	<!-- authorization-server aka AuthorizationServerTokenServices is an interface 
+		that defines everything necessary for token management -->
+	<oauth:authorization-server
+		client-details-service-ref="clientDetails" token-services-ref="tokenServices"
+		user-approval-handler-ref="userApprovalHandler">
+		<oauth:authorization-code />
+		<oauth:implicit />
+		<oauth:refresh-token />
+		<oauth:client-credentials />
+		<oauth:password />
+	</oauth:authorization-server>
+
+
+	<bean id="tokenStore"
+		class="org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore" />
+
+	<!-- <bean id="tokenStore" class="org.springframework.security.oauth2.provider.token.JdbcTokenStore"> 
+		<constructor-arg ref="dataSource" /> </bean> -->
+
+
+	<authentication-manager id="clientAuthenticationManager"
+		xmlns="http://www.springframework.org/schema/security">
+		<authentication-provider user-service-ref="clientDetailsUserService" />
+	</authentication-manager>
+
+	<authentication-manager alias="authenticationManager"
+		xmlns="http://www.springframework.org/schema/security">
+		<authentication-provider>
+			<user-service id="userDetailsService">
+				<user name="ADMIN" password="KYLIN" authorities="ROLE_ADMIN,ROLE_MODELER,ROLE_ANALYST" />
+				<user name="ANALYST" password="KYLIN" authorities="ROLE_ANALYST" />
+				<user name="MODELER" password="KYLIN" authorities="ROLE_MODELER" />
+			</user-service>
+		</authentication-provider>
+	</authentication-manager>
+
+
+	<bean id="clientDetailsUserService"
+		class="org.springframework.security.oauth2.provider.client.ClientDetailsUserDetailsService">
+		<constructor-arg ref="clientDetails" />
+	</bean>
+
+	<!-- End of configuration to support parameter-based client authentication -->
+
+
+
+	<!-- ========================= -->
+	<!-- OAUTH 2 : RESOURCE SERVER -->
+	<!-- ========================= -->
+	<oauth:resource-server id="resourceServerFilter"
+		resource-id="kylin" token-services-ref="tokenServices" />
+
+
+	<!-- ====================== -->
+	<!-- OAUTH 2 : SHARED BEANS -->
+	<!-- ====================== -->
+	<bean id="tokenServices"
+		class="org.springframework.security.oauth2.provider.token.DefaultTokenServices">
+		<property name="tokenStore" ref="tokenStore" />
+		<property name="supportRefreshToken" value="true" />
+		<property name="clientDetailsService" ref="clientDetails" />
+		<property name="accessTokenValiditySeconds" value="604800" /> <!-- 1 week -->
+	</bean>
+
+	<bean id="userApprovalHandler"
+		class="org.springframework.security.oauth2.provider.approval.ApprovalStoreUserApprovalHandler">
+	</bean>
+
+	<oauth:client-details-service id="clientDetails">
+
+		<oauth:client client-id="kylinadmin"
+			authorized-grant-types="password,authorization_code,refresh_token"
+			authorities="ROLE_ADMIN,ROLE_MODELER,ROLE_ANALYST" scope="read,write" secret="kylinsecret" />
+		<oauth:client client-id="kylinanalyst"
+			authorized-grant-types="password,authorization_code,refresh_token"
+			authorities="ROLE_ANALYST" scope="read,write,trust" secret="kylinsecret" />
+	</oauth:client-details-service>
+
+	<security:global-method-security
+		pre-post-annotations="enabled" proxy-target-class="true">
+		<security:expression-handler ref="oauthExpressionHandler" />
+	</security:global-method-security>
+
+	<oauth:expression-handler id="oauthExpressionHandler" />
+
+	<oauth:web-expression-handler id="oauthWebExpressionHandler" />
+
+
+	<bean id="clientCredentialsTokenEndpointFilter"
+		class="org.springframework.security.oauth2.provider.client.ClientCredentialsTokenEndpointFilter">
+		<property name="authenticationManager" ref="clientAuthenticationManager" />
+	</bean>
+
+	<bean id="oauthAccessDeniedHandler"
+		class="org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler" />
+
+	<bean id="oauthAuthenticationEntryPoint"
+		class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint">
+		<property name="realmName" value="kylin" />
+	</bean>
+
+	<bean id="clientAuthenticationEntryPoint"
+		class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint">
+		<property name="realmName" value="kylin" />
+
+	</bean>
+</beans>

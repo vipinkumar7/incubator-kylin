@@ -194,6 +194,12 @@
             <artifactId>spring-security-ldap</artifactId>
             <version>${spring.framework.version}</version>
         </dependency>
+        <!-- Spring Security OAuth -->
+        <dependency>
+			<groupId>org.springframework.security.oauth</groupId>
+			<artifactId>spring-security-oauth2</artifactId>
+			<version>2.0.8.RELEASE</version>
+		</dependency>
         <dependency>
             <groupId>net.sf.ehcache</groupId>
             <artifactId>ehcache</artifactId>
